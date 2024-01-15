@@ -1,6 +1,32 @@
 #!/bin/bash
 
-# 函数：验证 IP 和端口
+if ! command -v docker &> /dev/null
+then
+    echo "Docker 未安装，开始安装 Docker..."
+    # 根据你的系统选择合适的安装命令
+    # 这里以 Ubuntu 为例
+    sudo apt update
+    sudo apt install -y docker.io
+    # 启动 Docker 服务
+    sudo systemctl start docker
+    # 设置 Docker 开机自启
+    sudo systemctl enable docker
+    echo "Docker 安装完成。"
+else
+    echo "Docker 已安装。"
+fi
+
+if [ $(docker ps -a -q -f name=nginx) ]; then
+    echo "发现名为 nginx 的容器，正在停止并删除..."
+    docker stop nginx
+    docker rm nginx
+    echo "容器 nginx 已停止并删除。"
+else
+    echo "未发现名为 nginx 的容器。"
+fi
+
+echo "环境 OK!"
+
 validate_ip_port() {
     if [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         echo "输入了IP地址，需要输入端口。"
@@ -32,17 +58,13 @@ done
 read -p "是否需要负载均衡? [y/N]: " load_balancing
 proxy_domains=()
 if [ "$load_balancing" = "y" ]; then
-    echo "输入反代域名，输入空白值结束。"
+    echo "输入反代域名，输入空白值结束。无需http://"
     while true; do
         read -p "输入反代域名: " domain
         if [ -z "$domain" ]; then
             break
         fi
-        if ! [[ $domain =~ ^https?:// ]]; then
-            echo "域名需要以 http 或 https 开头。"
-        else
-            proxy_domains+=($domain)
-        fi
+        proxy_domains+=($domain)
     done
 else
     while true; do
@@ -51,7 +73,7 @@ else
             proxy_domains+=($domain)
             break
         else
-            echo "域名需要以 http 或 https 开头。"
+            echo "域名需要以 http:// 或 https:// 开头。"
         fi
     done
 fi
@@ -73,7 +95,6 @@ container_name="nginx"
 # 创建一个临时目录来存储 Nginx 配置文件
 config_dir=/www/wwwroot
 
-# 生成 Nginx 配置文件
 cat > $config_dir/nginx.conf <<EOF
 user  nginx;
 worker_processes  1;
@@ -86,26 +107,30 @@ http {
     sendfile        on;
     keepalive_timeout  65;
 
+    # 如果需要负载均衡
+    $(if [ "$load_balancing" = "y" ]; then
+        echo "upstream backend {"
+        for domain in "${proxy_domains[@]}"; do
+            echo "    server $domain;"
+        done
+        echo "}"
+      fi)
+
     server {
         listen       80;
         server_name  $proxy_domain;
 
         location / {
-            proxy_pass http://$domain_a;
+            $(if [ "$load_balancing" = "y" ]; then
+                echo "proxy_pass http://backend;"
+              else
+                echo "proxy_pass http://$domain_a;"
+              fi)
             proxy_cache_bypass \$http_upgrade;
 
             # 设置缓存时间
             proxy_cache_valid 200 $cache_time;
         }
-
-        # 如果需要负载均衡
-        $(if [ "$load_balancing" = "y" ]; then
-            echo "upstream backend {"
-            for domain in "${proxy_domains[@]}"; do
-                echo "    server $domain;"
-            done
-            echo "}"
-          fi)
     }
 }
 EOF
@@ -114,6 +139,6 @@ EOF
 docker run --name $container_name -v $config_dir/nginx.conf:/etc/nginx/nginx.conf:ro -d -p 80:80 nginx
 
 # 清理配置文件
-rm -rf $config_dir
+#rm -rf $config_dir
 
 echo "Nginx Docker 容器已启动。"
