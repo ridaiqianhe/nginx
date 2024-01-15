@@ -124,7 +124,7 @@ http {
             $(if [ "$load_balancing" = "y" ]; then
                 echo "proxy_pass http://backend;"
               else
-                echo "proxy_pass http://$domain_a;"
+                echo "proxy_pass http://$domain;"
               fi)
             proxy_cache_bypass \$http_upgrade;
 
@@ -136,9 +136,9 @@ http {
 EOF
 
 # 启动 Docker 容器并挂载配置文件
-docker run --name $container_name -v $config_dir/nginx.conf:/etc/nginx/nginx.conf:ro -d -p 80:80 nginx
+docker run --name $container_name --restart=always -v $config_dir/nginx.conf:/etc/nginx/nginx.conf:ro -d --network host nginx
 
 # 清理配置文件
 #rm -rf $config_dir
 
-echo "Nginx Docker 容器已启动。"
+echo "Nginx Docker 容器已启动。配置文件于 $config_dir/nginx.conf"
