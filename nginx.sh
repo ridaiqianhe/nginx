@@ -197,6 +197,7 @@ start_enviroment
 load_domain
 container_name="nginx$domain_a"
 config_dir=/www/wwwroot/nginx/$container_name
+echo "$config_dir"
 load_balancing
 apply_certificate
 make_conf
