@@ -181,8 +181,8 @@ make_conf() {
                 else
                     echo "proxy_pass $domain;"
                 fi)
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
                 proxy_cache_bypass \$http_upgrade;
 
                 proxy_cache_valid 200 $cache_time;
