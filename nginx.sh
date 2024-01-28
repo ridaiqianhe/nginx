@@ -156,7 +156,6 @@ make_conf() {
             echo "ssl_certificate_key /etc/nginx/tls/server.key;"
         fi)
 
-        # 如果需要负载均衡
         $(if [ "$load_balancing" = "y" ]; then
             echo "upstream backend {"
             for domain in "${proxy_domains[@]}"; do
@@ -180,11 +179,18 @@ make_conf() {
                 else
                     echo "proxy_pass $domain;"
                 fi)
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_cache_bypass \$http_upgrade;
-
-                # 设置缓存时间
                 proxy_cache_valid 200 $cache_time;
             }
+
+            location ~ ^/(\.user.ini|\.htaccess|\.git|\.env|\.svn|\.project|LICENSE|README.md)
+                {
+                    return 404;
+                }
+
+
         }
     }
 EOF
