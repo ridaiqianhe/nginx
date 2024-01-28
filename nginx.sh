@@ -152,6 +152,8 @@ make_conf() {
         keepalive_timeout  65;
 
         $(if [ "$apply_cert_option" = "y" ]; then
+            echo "proxy_ssl_session_reuse on;"
+            echo "proxy_ssl_server_name on;"
             echo "ssl_certificate /etc/nginx/tls/server.crt;"
             echo "ssl_certificate_key /etc/nginx/tls/server.key;"
         fi)
