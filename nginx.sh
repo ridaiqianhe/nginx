@@ -152,8 +152,6 @@ make_conf() {
         keepalive_timeout  65;
 
         $(if [ "$apply_cert_option" = "y" ]; then
-            echo "proxy_ssl_session_reuse on;"
-            echo "proxy_ssl_server_name on;"
             echo "ssl_certificate /etc/nginx/tls/server.crt;"
             echo "ssl_certificate_key /etc/nginx/tls/server.key;"
         fi)
@@ -170,6 +168,8 @@ make_conf() {
             listen       80;
             $(if [ "$apply_cert_option" = "y" ]; then
                 echo "listen 443 ssl;"
+                echo "proxy_ssl_session_reuse on;"
+                echo "proxy_ssl_server_name on;"
                 echo "ssl_protocols TLSv1.2 TLSv1.3;"
                 echo "ssl_ciphers 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384';"
             fi)
